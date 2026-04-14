@@ -1,0 +1,15 @@
+# generic
+*.pdf
+todo.txt
+PIANO.md
+ROADMAP.md
+
+# Compiled files
+*.pyc
+*.pyo
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
