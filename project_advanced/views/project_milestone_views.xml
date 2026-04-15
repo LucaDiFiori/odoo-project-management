@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Inherit list view: replace is_reached with state badge + progress -->
+    <record id="project_milestone_view_tree_inherit" model="ir.ui.view">
+        <field name="name">project.milestone.view.list.inherit</field>
+        <field name="model">project.milestone</field>
+        <field name="inherit_id" ref="project.project_milestone_view_tree"/>
+        <field name="arch" type="xml">
+            <field name="is_reached" position="before">
+                <field name="state" widget="badge"
+                       decoration-info="state == 'in_progress'"
+                       decoration-success="state == 'done'"
+                       decoration-warning="state == 'todo'"/>
+                <field name="progress" widget="progressbar"/>
+            </field>
+            <field name="is_reached" position="replace"/>
+        </field>
+    </record>
+
+    <!-- Inherit form view: add state as statusbar, keep is_reached hidden -->
+    <record id="project_milestone_view_form_inherit" model="ir.ui.view">
+        <field name="name">project.milestone.view.form.inherit</field>
+        <field name="model">project.milestone</field>
+        <field name="inherit_id" ref="project.project_milestone_view_form"/>
+        <field name="arch" type="xml">
+            <!-- Add statusbar in header -->
+            <sheet position="before">
+                <header>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="todo,in_progress,done"/>
+                </header>
+            </sheet>
+            <!-- Hide is_reached (replaced by state) -->
+            <field name="is_reached" position="replace"/>
+            <!-- Add task list below the main group -->
+            <group name="main_details" position="after">
+                <group string="Tasks" name="task_list">
+                    <field name="task_ids" nolabel="1">
+                        <list editable="bottom">
+                            <field name="name"/>
+                            <field name="user_ids" widget="many2many_tags"/>
+                            <field name="state" widget="badge"/>
+                        </list>
+                    </field>
+                </group>
+            </group>
+        </field>
+    </record>
+
+    <!-- Search view for milestones -->
+    <record id="project_milestone_view_search" model="ir.ui.view">
+        <field name="name">project.milestone.view.search</field>
+        <field name="model">project.milestone</field>
+        <field name="arch" type="xml">
+            <search string="Milestones">
+                <field name="name"/>
+                <field name="project_id"/>
+                <separator/>
+                <filter name="todo" string="To Do"
+                        domain="[('state', '=', 'todo')]"/>
+                <filter name="in_progress" string="In Progress"
+                        domain="[('state', '=', 'in_progress')]"/>
+                <filter name="done" string="Done"
+                        domain="[('state', '=', 'done')]"/>
+                <separator/>
+                <!-- <filter name="overdue" string="Overdue"
+                        domain="[('is_deadline_exceeded', '=', True)]"/>
+                <separator/> -->
+                <group expand="0" string="Group By">
+                    <filter name="group_by_project" string="Project"
+                            context="{'group_by': 'project_id'}"/>
+                    <filter name="group_by_state" string="State"
+                            context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action for standalone milestone view -->
+    <record id="action_project_milestone" model="ir.actions.act_window">
+        <field name="name">Milestones</field>
+        <field name="res_model">project.milestone</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="project_milestone_view_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No milestones found. Create one to track project progress.
+            </p>
+        </field>
+    </record>
+
+</odoo>

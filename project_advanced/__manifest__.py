@@ -26,10 +26,11 @@
 
     # Detailed description of what the module does
     'description': """
-        Extends the native Project module with:
-        - Milestone state management (To Do, In Progress, Done)
-        - Team member roles per project
-        - Summary views and filters
+Extends the native Project module with:
+
+- Milestone state management (To Do, In Progress, Done)
+- Team member roles per project
+- Summary views and filters
     """,
 
     # Author of the module

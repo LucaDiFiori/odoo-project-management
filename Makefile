@@ -1,0 +1,60 @@
+ODOO_BIN     := /home/lucadifiori/odoo/odoo-bin
+ODOO_ADDONS  := /home/lucadifiori/odoo/addons
+MODULE_PATH  := /home/lucadifiori/Desktop/odoo-project-management
+VENV         := $(MODULE_PATH)/venv/bin/python
+DB           := odoo_dev
+PORT         := 8069
+LOG_LEVEL    := info
+
+# Start Odoo with hot-reload enabled (recommended during development)
+run:
+	@echo "[INFO] Starting Odoo server..."
+	@echo "[INFO] Odoo should be reachable at: http://localhost:$(PORT)"
+	@echo "[INFO] Press Ctrl+C to stop the server."
+	@$(VENV) $(ODOO_BIN) \
+		--addons-path=$(ODOO_ADDONS),$(MODULE_PATH) \
+		--dev=all \
+		-d $(DB) \
+		--http-port=$(PORT) \
+		--logfile=/dev/stdout \
+		--log-level=$(LOG_LEVEL)
+
+# Force reinstall of the module (use after adding new models, views, or security rules)
+update:
+	@$(VENV) $(ODOO_BIN) \
+		--addons-path=$(ODOO_ADDONS),$(MODULE_PATH) \
+		--dev=all \
+		-d $(DB) \
+		--http-port=$(PORT) \
+		-u project_advanced \
+		--stop-after-init \
+		--logfile=/dev/stdout \
+		--log-level=$(LOG_LEVEL); \
+	status=$$?; \
+	if [ $$status -eq 0 ]; then \
+		echo "[OK] Update completed successfully."; \
+	else \
+		echo "[ERROR] Update failed (exit code: $$status)."; \
+	fi; \
+	exit $$status
+
+# Install the module for the first time on a fresh database
+install:
+	@$(VENV) $(ODOO_BIN) \
+		--addons-path=$(ODOO_ADDONS),$(MODULE_PATH) \
+		--dev=all \
+		-d $(DB) \
+		--http-port=$(PORT) \
+		-i project_advanced \
+		--stop-after-init \
+		--logfile=/dev/stdout \
+		--log-level=$(LOG_LEVEL); \
+	status=$$?; \
+	if [ $$status -eq 0 ]; then \
+		echo "[OK] Installation completed successfully."; \
+	else \
+		echo "[ERROR] Installation failed (exit code: $$status)."; \
+	fi; \
+	exit $$status
+
+.PHONY: run update install
