@@ -5,6 +5,7 @@ PIANO.md
 ROADMAP.md
 
 # Compiled files
+__pycache__/
 *.pyc
 *.pyo
 
@@ -13,3 +14,7 @@ venv/
 ENV/
 env/
 .venv
+
+# Editor / IDE
+pyrightconfig.json
+.vscode/

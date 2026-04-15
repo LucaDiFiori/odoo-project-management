@@ -10,9 +10,8 @@ This module extends Odoo's native project management functionality with:
 - **Team member allocation** on tasks
 - **Progress tracking views** based on milestone completion
 
-## 🚀 Quick Start
 
-### Prerequisites
+## Prerequisites
 
 - Python 3.10+
 - PostgreSQL 14+
@@ -181,55 +180,66 @@ cd odoo
 
 ---
 
-### Step 5: Create a Python Virtual Environment
+### Step 5: Clone This Repository and Create a Virtual Environment
 
-A **virtual environment** is an isolated Python space for this project. It prevents conflicts with other projects.
+Clone this module's repository and create the virtual environment **inside it** (not inside the Odoo directory).
 
 ```bash
-# Make sure you're in the odoo directory
-cd /<homepath>/odoo
+# Clone this repository
+git clone <repository-url>
+cd odoo-project-management
 
 # Create virtual environment
 python3 -m venv venv
 
 # Activate it
-source venv/bin/activate
+source venv/bin/activate  # Linux/macOS
+venv\Scripts\activate     # Windows
 
 # You should see (venv) in your terminal prompt
 ```
 
-**What happened:**
-- `python3 -m venv venv` → Creates a folder named `venv` with isolated Python
-- `source venv/bin/activate` → "Enter" that isolated environment
-- Now any packages you install only affect THIS project
-
-**Why this matters?** Without a virtual env, installing Odoo could break other Python projects on your system.
+**Why here and not in the Odoo directory?** The venv belongs to this module project. Odoo source is a shared dependency we'll point to, not something we own.
 
 ---
 
-### Step 6: Install Odoo Dependencies
+### Step 6: Install Odoo and Its Dependencies
 
-Now we'll install the dependencies that Odoo 18 requires.
+With the venv activated, install Odoo from the cloned source in **editable mode** (`-e`). This installs Odoo and all its dependencies in one step.
 
 ```bash
-# Make sure virtual environment is activated
-# (you should see (venv) in your prompt)
+# Install Odoo from the local clone
+pip install -e /<homepath>/odoo
 
-# Install dependencies from requirements.txt
-pip install -r requirements.txt
-
-# If there are any missing packages, install them individually
-pip install lxml_html_clean psycopg2-binary
+# Install a missing dependency not included in Odoo's requirements.txt
+pip install lxml_html_clean
 
 # Verify Odoo is ready
-odoo --version
+python -c "from odoo import api, fields, models; print('OK')"
 ```
 
-**What's installing:**
-- All Python packages that Odoo 18 depends on (Babel, Jinja2, Werkzeug, etc.)
-- `psycopg2-binary` → Driver that lets Python (Odoo) talk to PostgreSQL
+**What `-e` does:** Links the venv directly to the Odoo source folder. Changes to Odoo source are reflected immediately — no reinstall needed.
 
-This takes a few minutes because it's downloading and installing many dependencies.
+**Why `lxml_html_clean`?** It was split off from `lxml` into a separate package; Odoo 18's `requirements.txt` hasn't caught up yet.
+
+---
+
+### Step 6b: Configure Pyright / VS Code (optional)
+
+The repository already includes a `pyrightconfig.json` that tells Pyright to use the local venv. For it to resolve the `odoo` import, you need to register the Odoo source path in the venv with a `.pth` file:
+
+```bash
+# Replace /<homepath>/odoo with your actual Odoo clone path
+echo "/<homepath>/odoo" > venv/lib/python3.*/site-packages/odoo-source.pth
+```
+
+For example, if your Odoo clone is at `/home/john/odoo` and you're on Python 3.13:
+
+```bash
+echo "/home/john/odoo" > venv/lib/python3.13/site-packages/odoo-source.pth
+```
+
+Then reload your editor window. The `Import "odoo" could not be resolved` warning will disappear.
 
 ---
 
@@ -271,14 +281,20 @@ EOF
 Now let's launch Odoo! This is the important moment - Odoo will create the database automatically.
 
 Make sure:
-1. You're in the `odoo` directory
-2. The venv is activated (you see `(venv)` in prompt)
-3. PostgreSQL is running
+1. The venv is activated (you see `(venv)` in prompt)
+2. PostgreSQL is running
 
-Then execute:
+Then execute from the Odoo source directory:
 
 ```bash
-odoo --dev=all -d odoo_dev
+cd /<homepath>/odoo
+python odoo-bin --addons-path=addons,/<path>/odoo-project-management --dev=all -d odoo_dev
+```
+
+Or use the `odoo` command if it's on your PATH:
+
+```bash
+odoo --addons-path=/<homepath>/odoo/addons,/<path>/odoo-project-management --dev=all -d odoo_dev
 ```
 
 **What's happening:**
@@ -409,21 +425,45 @@ sudo -u postgres dropdb odoo_dev
 
 ### ModuleNotFoundError: No module named 'odoo'
 ```bash
-# Virtual environment not activated
+# 1. Make sure the virtual environment is activated
 source venv/bin/activate  # Linux/macOS
-# or
-venv\Scripts\activate  # Windows
+
+# 2. Make sure Odoo is installed in the venv
+pip install -e /<homepath>/odoo
+pip install lxml_html_clean
+```
+
+### Import "odoo" could not be resolved (VS Code / Pyright warning)
+```bash
+# Add the Odoo source path to the venv as a .pth file
+echo "/<homepath>/odoo" > venv/lib/python3.13/site-packages/odoo-source.pth
+# Then reload the VS Code window (Ctrl+Shift+P → Reload Window)
 ```
 
 ---
 
-## 📚 Next Steps
+## 🚀 Quick Start
 
-Once your environment is working:
-1. Explore Odoo's built-in Project module
-2. Create the custom models (Milestone, TeamMember)
-3. Build views and menus
-4. Test with sample data
+Once the environment is set up (see steps above), use the `Makefile` to manage the Odoo server:
+
+| Command | Description |
+|---|---|
+| `make run` | Starts the Odoo server with hot-reload enabled. Use this during normal development — code changes are picked up automatically without restarting. |
+| `make install` | Installs the `project_advanced` module for the first time on a fresh database. Run this once after creating the database. |
+| `make update` | Reinstalls the module, applying any changes to models, views, or security rules. Run this whenever you add new fields, models, or XML records. |
+
+**Typical workflow:**
+
+```bash
+# First time: install the module
+make install
+
+# Start developing (hot-reload active)
+make run
+
+# After adding a new model or view
+make update
+```
 
 ---
 
