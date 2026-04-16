@@ -5,6 +5,9 @@ VENV         := $(MODULE_PATH)/venv/bin/python
 DB           := odoo_dev
 PORT         := 8069
 LOG_LEVEL    := info
+GREEN_BOLD   := \033[1;32m
+RED_BOLD     := \033[1;31m
+RESET_COLOR  := \033[0m
 
 # Start Odoo with hot-reload enabled (recommended during development)
 run:
@@ -32,9 +35,9 @@ update:
 		--log-level=$(LOG_LEVEL); \
 	status=$$?; \
 	if [ $$status -eq 0 ]; then \
-		echo "[OK] Update completed successfully."; \
+		printf '%b\n' "$(GREEN_BOLD)[OK] Update completed successfully.$(RESET_COLOR)"; \
 	else \
-		echo "[ERROR] Update failed (exit code: $$status)."; \
+		printf '%b\n' "$(RED_BOLD)[ERROR] Update failed (exit code: $$status).$(RESET_COLOR)"; \
 	fi; \
 	exit $$status
 
@@ -51,9 +54,9 @@ install:
 		--log-level=$(LOG_LEVEL); \
 	status=$$?; \
 	if [ $$status -eq 0 ]; then \
-		echo "[OK] Installation completed successfully."; \
+		printf '%b\n' "$(GREEN_BOLD)[OK] Installation completed successfully.$(RESET_COLOR)"; \
 	else \
-		echo "[ERROR] Installation failed (exit code: $$status)."; \
+		printf '%b\n' "$(RED_BOLD)[ERROR] Installation failed (exit code: $$status).$(RESET_COLOR)"; \
 	fi; \
 	exit $$status
 
