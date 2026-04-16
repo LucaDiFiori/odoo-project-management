@@ -57,4 +57,12 @@ install:
 	fi; \
 	exit $$status
 
-.PHONY: run update install
+# Open an interactive Odoo shell (useful for debugging and testing)
+shell:
+	@$(VENV) $(ODOO_BIN) shell \
+		--addons-path=$(ODOO_ADDONS),$(MODULE_PATH) \
+		-d $(DB) \
+		--http-port=$(PORT) \
+		--logfile=/dev/null
+
+.PHONY: run update install shell
