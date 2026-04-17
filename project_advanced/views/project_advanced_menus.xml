@@ -1,2 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo></odoo>
+<odoo>
+
+    <menuitem id="menu_project_milestone"
+              name="Milestones"
+              parent="project.menu_main_pm"
+              action="action_project_milestone"
+              sequence="3"/>
+
+    <menuitem id="menu_project_team_member"
+              name="Team Members"
+              parent="project.menu_main_pm"
+              action="action_project_team_member"
+              sequence="4"/>
+
+</odoo>
