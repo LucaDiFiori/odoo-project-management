@@ -6,11 +6,12 @@
         <field name="name">project.team.member.view.list</field>
         <field name="model">project.team.member</field>
         <field name="arch" type="xml">
-            <list editable="bottom">
+            <list>
                 <field name="project_id"/>
                 <field name="user_id" widget="many2one_avatar_user"/>
                 <field name="role"/>
                 <field name="email"/>
+                <field name="milestone_ids" widget="many2many_tags"/>
             </list>
         </field>
     </record>
