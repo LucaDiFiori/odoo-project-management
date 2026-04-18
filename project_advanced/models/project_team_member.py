@@ -1,4 +1,5 @@
-from odoo import fields, models
+from odoo import _, fields, models
+from odoo.exceptions import ValidationError
 
 # ProjectTeamMember represents the association between a project and its team members, 
 # including their roles within the project.
@@ -70,6 +71,32 @@ class ProjectTeamMember(models.Model):
     # - UNIQUE(project_id, user_id) ensures that the combination of project_id and user_id is unique across the table, 
     #   meaning that a user cannot be added more than once to the same
     # - The last element is the error message that will be shown if this constraint is violated
+    #--------------------------------------------------------------
+    # ORM overrides
+    #--------------------------------------------------------------
+    # Prevents deletion of a team member who still has tasks assigned in the project.
+    # Raises a ValidationError listing the conflicting task names so the user knows
+    # exactly what to reassign before removing the member.
+    # NOTE:
+    # unlink() is the Odoo ORM method for DELETE. Overriding it is the correct place
+    # to add pre-delete guards — the check runs before any row is removed from the DB.
+    # self can be a recordset with multiple records (e.g. bulk delete from list view),
+    # so we iterate and collect all conflicts before raising a single error.
+    def unlink(self):
+        for member in self:
+            assigned_tasks = self.env['project.task'].search([
+                ('project_id', '=', member.project_id.id),
+                ('user_ids', 'in', member.user_id.id),
+            ])
+            if assigned_tasks:
+                task_names = ', '.join(assigned_tasks.mapped('name'))
+                raise ValidationError(
+                    _("Cannot remove %s: they are still assigned to task(s): %s. "
+                      "Please reassign those tasks first.")
+                    % (member.user_id.name, task_names)
+                )
+        return super().unlink()
+
     _sql_constraints = [
         (
             'unique_member_per_project',
