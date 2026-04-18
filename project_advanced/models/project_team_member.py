@@ -1,4 +1,4 @@
-from odoo import _, fields, models
+from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
 # ProjectTeamMember represents the association between a project and its team members, 
@@ -64,16 +64,48 @@ class ProjectTeamMember(models.Model):
     )
 
     #--------------------------------------------------------------
-    # SQL constraints
+    # computed fields
     #--------------------------------------------------------------
-    # _sql_constraints is a list of SQL constraints that are applied to the database table.
-    # - unique_member_per_project is the name of the constraint.
-    # - UNIQUE(project_id, user_id) ensures that the combination of project_id and user_id is unique across the table, 
-    #   meaning that a user cannot be added more than once to the same
-    # - The last element is the error message that will be shown if this constraint is violated
+    # milestone_ids is a computed Many2many field that returns all milestones
+    # in the project where this user has at least one task assigned.
+    # It has no DB column — values are derived on the fly by querying project.task.
+    # NOTE:
+    # @api.depends('project_id', 'user_id') recomputes the field when the member's
+    # project or user changes. Changes to task assignments are not tracked here
+    # because there is no direct field path from team member to tasks.
+    milestone_ids = fields.Many2many(
+        'project.milestone',
+        compute='_compute_milestone_ids',
+        string='Milestones',
+    )
+
+    # Searches for all tasks in the project assigned to this user that have a milestone,
+    # then returns the distinct milestones via mapped('milestone_id').
+    # NOTE:
+    # ('milestone_id', '!=', False) filters out tasks with no milestone assigned,
+    # so only relevant milestones appear. mapped() deduplicates automatically
+    # because it operates on a recordset.
+    @api.depends('project_id', 'user_id')
+    def _compute_milestone_ids(self):
+        for member in self:
+            tasks = self.env['project.task'].search([
+                ('project_id', '=', member.project_id.id),
+                ('user_ids', 'in', member.user_id.id),
+                ('milestone_id', '!=', False),
+            ])
+            member.milestone_ids = tasks.mapped('milestone_id')
+
     #--------------------------------------------------------------
     # ORM overrides
     #--------------------------------------------------------------
+    # Redirects the row click to the linked user's form view instead of opening
+    # the project.team.member form. This makes the list behave as a roster where
+    # clicking a member navigates directly to their user profile.
+    def get_formview_action(self, access_uid=None):
+        self.ensure_one()
+        return self.user_id.get_formview_action(access_uid=access_uid)
+
+
     # Prevents deletion of a team member who still has tasks assigned in the project.
     # Raises a ValidationError listing the conflicting task names so the user knows
     # exactly what to reassign before removing the member.
@@ -97,6 +129,16 @@ class ProjectTeamMember(models.Model):
                 )
         return super().unlink()
 
+    #--------------------------------------------------------------
+    # SQL constraints
+    #--------------------------------------------------------------
+    # _sql_constraints is a list of SQL constraints applied at the database level.
+    # - unique_member_per_project ensures UNIQUE(project_id, user_id):
+    #   a user cannot be added more than once to the same project.
+    # - The third element is the error message shown to the user if the constraint is violated.
+    # NOTE:
+    # A SQL constraint is stronger than @api.constrains — it is enforced by PostgreSQL
+    # directly, so it covers direct DB writes that bypass the ORM as well.
     _sql_constraints = [
         (
             'unique_member_per_project',
