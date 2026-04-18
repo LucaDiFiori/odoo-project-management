@@ -2,14 +2,155 @@
 
 > Development of an advanced Odoo module for project management, milestones, and team allocation.
 
-## 📋 Description
+---
+
+## Table of Contents
+
+- [Description](#description)
+- [Module Overview](#module-overview)
+- [Installing the Module](#installing-the-module)
+- [Prerequisites](#prerequisites)
+- [Development Environment Setup](#development-environment-setup)
+- [Project Structure](#project-structure)
+- [Common Commands During Development](#common-commands-during-development)
+- [Troubleshooting](#troubleshooting)
+- [Quick Start](#quick-start)
+- [Official Resources](#official-resources)
+
+---
+
+## Description
 
 This module extends Odoo's native project management functionality with:
+
 - **Milestone system** (project phases) for better planning
 - **Team role management** (Team Lead, Developer, Tester, Analyst)
 - **Automatic team member sync**: assigning a user to a task automatically adds them as a project team member
+- **Deletion protection**: a team member cannot be removed while they have tasks assigned in the project
+- **Role-based access control**: Project Users have read-only access to team members; Project Managers have full access
 - **Progress tracking views** based on milestone completion
 
+---
+
+## Module Overview
+
+### Models
+
+#### `project_milestone.py` — Extends `project.milestone`
+
+**Features:**
+- Adds a `state` field (`To Do`, `In Progress`, `Done`) as a richer alternative to the native boolean `is_reached`
+- Adds a computed `progress` field (percentage of completed top-level tasks)
+- Adds a computed `can_set_done` field (True only when all top-level tasks are closed)
+- Exposes action buttons: `action_set_todo`, `action_set_in_progress`, `action_set_done`
+
+**Technical notes:**
+- `state` and `is_reached` are kept bidirectionally synchronized in `create`, `write`, and `toggle_is_reached` to preserve compatibility with Odoo's native UI (kanban checkboxes, native views)
+- Progress is computed using `_read_group` with `state:array_agg` — a single SQL query instead of N queries, excluding subtasks via `parent_id = False`
+- `@api.depends('task_ids.state', 'task_ids.parent_id')` uses dot-notation to track changes on related records
+
+---
+
+#### `project_team_member.py` — New model `project.team.member`
+
+**Features:**
+- Associates a user to a project with a role (`Team Lead`, `Developer`, `Tester`, `Analyst`)
+- Exposes the user's email as a read-only related field
+- Blocks deletion if the user still has tasks assigned in the project
+
+**Technical notes:**
+- `UNIQUE(project_id, user_id)` SQL constraint prevents duplicate entries at the database level — stronger than a Python `@api.constrains` since it covers direct DB writes too
+- `ondelete='cascade'` on both `project_id` and `user_id` ensures records are cleaned up automatically if the project or user is deleted
+- `email` is a `related` field (no DB column) — always reflects the user's current email without data duplication
+- `unlink()` is overridden to raise a `ValidationError` listing conflicting task names before any row is deleted
+
+---
+
+#### `project_project.py` — Extends `project.project`
+
+**Features:**
+- Adds `team_member_ids` (One2many to `project.team.member`) to expose team members from the project form
+- Adds computed `team_member_count` (integer)
+- Adds computed `milestone_progress_percentage` (float, 0–100)
+
+**Technical notes:**
+- `One2many` does not create a DB column — it uses the `project_id` foreign key in `project_team_member`
+- `@api.depends('milestone_ids.is_reached')` uses dot-notation to recompute whenever any linked milestone changes
+
+---
+
+#### `project_task.py` — Extends `project.task`
+
+**Features:**
+- When a user is assigned to a task, they are automatically added as a `project.team.member` with role `developer` if not already present
+
+**Technical notes:**
+- Sync runs **after** `super().create()` / `super().write()` because Many2many `user_ids` rows are only committed after the parent call
+- `write()` checks `if 'user_ids' in vals or 'project_id' in vals` to avoid running the sync on every field change
+- Pre-checks existing members before inserting to avoid triggering the SQL UNIQUE constraint
+
+---
+
+### Views
+
+| File | What it does |
+|---|---|
+| `project_milestone_views.xml` | Extends milestone list/form views; adds state badge, progress bar, statusbar, task inline list |
+| `project_team_member_views.xml` | Defines list, form, search views and action for `project.team.member` |
+| `project_project_views.xml` | Extends project form with two new tabs: Milestones and Team |
+| `project_advanced_menus.xml` | Adds Milestones and Team Members entries to the Project main menu |
+
+### Security
+
+| Group | Read | Write | Create | Delete |
+|---|---|---|---|---|
+| Project User | ✓ | ✗ | ✗ | ✗ |
+| Project Manager | ✓ | ✓ | ✓ | ✓ |
+
+---
+
+## Installing the Module
+
+Once the development environment is set up, use the `Makefile` to install or update the module.
+
+### First installation (fresh database)
+
+```bash
+make install
+```
+
+Runs `odoo-bin -i project_advanced --stop-after-init`. Odoo will:
+1. Create all tables defined by the module's models (`project_team_member`, new columns on `project_milestone`, etc.)
+2. Load all XML files (views, menus, actions)
+3. Apply security rules from `ir.model.access.csv`
+4. Stop automatically when done (no server left running)
+
+Prints `[OK] Installation completed successfully.` on success, or `[ERROR]` with the exit code on failure.
+
+### After modifying models, views, or security rules
+
+```bash
+make update
+```
+
+Runs `odoo-bin -u project_advanced --stop-after-init`. Odoo will:
+1. Diff the current DB schema against the Python models and apply any changes (new columns, altered constraints, etc.)
+2. Reload all XML files (views, menus, actions) — changes to existing records are re-applied
+3. Re-apply security rules
+4. Stop automatically when done
+
+Prints `[OK] Update completed successfully.` on success, or `[ERROR]` with the exit code on failure.
+
+> **When to use which:** use `make install` only once on a fresh database. Use `make update` every time you change a model field, add a view, or modify `ir.model.access.csv`.
+
+### Verify the installation
+
+1. Open `http://localhost:8069`
+2. Log in as `admin` / `admin`
+3. The **Project** app menu should show **Milestones** and **Team Members** entries
+4. Open any project form — you should see the **Milestones** and **Team** tabs
+
+---
 
 ## Prerequisites
 
@@ -18,7 +159,9 @@ This module extends Odoo's native project management functionality with:
 - Git 2.x
 - pip and virtualenv
 
-## 🛠️ Development Environment Setup
+---
+
+## Development Environment Setup
 
 This section walks through setting up a complete Odoo 18 development environment from scratch.
 
@@ -348,14 +491,14 @@ To develop custom modules, you need Developer Mode enabled.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
-odoo-project-module/
-├── venv/                       # Virtual environment (auto-created)
-├── project_advanced/           # Our custom module
+odoo-project-management/
+├── venv/                           # Virtual environment (auto-created)
+├── project_advanced/               # Our custom module
 │   ├── __init__.py
-│   ├── __manifest__.py         # Module metadata
+│   ├── __manifest__.py             # Module metadata and dependencies
 │   ├── models/
 │   │   ├── __init__.py
 │   │   ├── project_milestone.py    # Extends project.milestone (state, progress, sync)
@@ -369,15 +512,15 @@ odoo-project-module/
 │   │   └── project_advanced_menus.xml
 │   ├── security/
 │   │   └── ir.model.access.csv
-│   └── static/                 # CSS, JS (if needed)
 ├── .gitignore
 ├── requirements.txt
+├── Makefile
 └── README.md
 ```
 
 ---
 
-## ⚙️ Common Commands During Development
+## Common Commands During Development
 
 ```bash
 # Activate virtual environment
@@ -399,7 +542,7 @@ odoo --dev=all -d odoo_dev --logfile=/tmp/odoo.log && tail -f /tmp/odoo.log
 
 ---
 
-## ❌ Troubleshooting
+## Troubleshooting
 
 ### PostgreSQL Connection Failed
 ```bash
@@ -445,7 +588,7 @@ echo "/<homepath>/odoo" > venv/lib/python3.13/site-packages/odoo-source.pth
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 Once the environment is set up (see steps above), use the `Makefile` to manage the Odoo server:
 
@@ -470,7 +613,7 @@ make update
 
 ---
 
-## 🔗 Official Resources
+## Official Resources
 
 - Odoo 18 Documentation: https://www.odoo.com/documentation/18.0/
 - Odoo Developer Tutorials: https://www.odoo.com/documentation/18.0/developer/tutorials.html
@@ -478,4 +621,4 @@ make update
 
 ---
 
-**Status**: 🔨 Development Setup Guide - Last Updated April 2026
+**Status**: Development Setup Guide - Last Updated April 2026
