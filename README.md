@@ -7,7 +7,7 @@
 This module extends Odoo's native project management functionality with:
 - **Milestone system** (project phases) for better planning
 - **Team role management** (Team Lead, Developer, Tester, Analyst)
-- **Team member allocation** on tasks
+- **Automatic team member sync**: assigning a user to a task automatically adds them as a project team member
 - **Progress tracking views** based on milestone completion
 
 
@@ -358,12 +358,15 @@ odoo-project-module/
 │   ├── __manifest__.py         # Module metadata
 │   ├── models/
 │   │   ├── __init__.py
-│   │   ├── milestone.py        # Milestone model
-│   │   └── team_member.py      # Team member model
+│   │   ├── project_milestone.py    # Extends project.milestone (state, progress, sync)
+│   │   ├── project_team_member.py  # New model: project.team.member
+│   │   ├── project_project.py      # Extends project.project (team_member_ids, computed fields)
+│   │   └── project_task.py         # Extends project.task (auto-sync assignees → team members)
 │   ├── views/
-│   │   ├── milestone_view.xml
-│   │   ├── team_member_view.xml
-│   │   └── project_view.xml
+│   │   ├── project_milestone_views.xml
+│   │   ├── project_team_member_views.xml
+│   │   ├── project_project_views.xml
+│   │   └── project_advanced_menus.xml
 │   ├── security/
 │   │   └── ir.model.access.csv
 │   └── static/                 # CSS, JS (if needed)
