@@ -9,34 +9,30 @@ from odoo import api, fields, models
 # and to add computed summary fields (team member count, milestone progress)
 # that are accessed directly from the project form view.
 class ProjectProject(models.Model):
+    #--------------------------------------------------------------
+    # model metadata
+    #--------------------------------------------------------------
     _inherit = 'project.project'
 
+    #--------------------------------------------------------------
+    # fields definition
+    #--------------------------------------------------------------
+    # Inverse side of the One2many: lists all team members linked to this project.
     team_member_ids = fields.One2many(
-        'project.team.member',
-        'project_id',
+        'project.team.member', # target model
+        'project_id',          # Many2one field on project.team.member pointing back here
         string='Team Members',
     )
-    team_member_count = fields.Integer(
-        string='Team Members',
-        compute='_compute_team_member_count',
-    )
+    # Computed float (0–100) representing the share of milestones already reached.
     milestone_progress_percentage = fields.Float(
         string='Milestone Progress',
         compute='_compute_milestone_progress_percentage',
         help='Percentage of milestones marked as Done',
     )
 
-    # Counts the number of team members assigned to each project.
-    # NOTE
-    # @api.depends('team_member_ids') is a decorator that tells Odoo to automatically 
-    # recompute the team_member_count field whenever the team_member_ids field changes 
-    # (e.g., when team members are added or removed from the project), 
-    # ensuring that the count is always accurate and up-to-date.
-    @api.depends('team_member_ids')
-    def _compute_team_member_count(self):
-        for project in self:
-            project.team_member_count = len(project.team_member_ids)
-
+    #--------------------------------------------------------------
+    # computed fields
+    #--------------------------------------------------------------
     # Computes the percentage of milestones marked as done for each project.
     # Triggers recompute whenever is_reached changes on any linked milestone.
     # Returns 0.0 if no milestones exist to avoid division by zero.
