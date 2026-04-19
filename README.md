@@ -70,7 +70,6 @@ This module extends Odoo's native project management functionality with:
 
 **Features:**
 - Adds `team_member_ids` (One2many to `project.team.member`) to expose team members from the project form
-- Adds computed `team_member_count` (integer)
 - Adds computed `milestone_progress_percentage` (float, 0–100)
 
 **Technical notes:**

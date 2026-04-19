@@ -4,8 +4,14 @@ from odoo import api, models
 # project.team.member table. When a user is assigned to a task, they are added
 # as a team member of the project (with role 'developer') if not already present.
 class ProjectTask(models.Model):
+    #--------------------------------------------------------------
+    # model metadata
+    #--------------------------------------------------------------
     _inherit = 'project.task'
 
+    #--------------------------------------------------------------
+    # helpers
+    #--------------------------------------------------------------
     # Ensures all users in user_ids are registered as team members of the given project.
     # Queries existing team members first to avoid duplicates, then creates only the missing ones.
     # NOTE:
@@ -33,6 +39,9 @@ class ProjectTask(models.Model):
                 'role': 'developer',
             })
 
+    #--------------------------------------------------------------
+    # ORM overrides
+    #--------------------------------------------------------------
     # Syncs assignees to team members after task creation.
     # The sync runs after super().create() because only at that point are the Many2many
     # user_ids rows committed to the DB and readable via task.user_ids.ids.

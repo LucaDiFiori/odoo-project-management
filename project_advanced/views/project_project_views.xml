@@ -18,7 +18,7 @@
                                    decoration-success="state == 'done'"
                                    decoration-warning="state == 'todo'"/>
                             <field name="progress" widget="progressbar"/>
-                            <field name="task_count" string="Tasks"/>
+                            <field name="task_count" string="Tasks" help="Total number of tasks and subtasks linked to this milestone"/>
                         </list>
                     </field>
                 </page>

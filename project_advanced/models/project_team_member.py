@@ -17,10 +17,12 @@ class ProjectTeamMember(models.Model):
     # fields definition
     #--------------------------------------------------------------
     # project_id represents the project that this team member belongs to
-    # -`project.project` creates a foreign key relationship in the database, linking the team member table to a specific project in the project table.
+    # -`project.project` creates a foreign key relationship in the database, 
+    #   linking the team member table to a specific project in the project table.
     # - string='Project' is the label that will be shown in the user interface for this field
     # - required=True means that this field must be filled in for a record to be valid
-    # - ondelete='cascade' means that if the linked project is deleted, this team member record will also be deleted automatically
+    # - ondelete='cascade' means that if the linked project is deleted, 
+    #   this team member record will also be deleted automatically
     # NOTE:
     # Many2one links this record to one project.
     # We use it here because each team member belongs to a single project,
@@ -33,10 +35,11 @@ class ProjectTeamMember(models.Model):
     )
 
     # user_id defines the user that is a member of the project team.
-    # It is a Many2one field linking to the 'res.users' model, which represents the users in the Odoo system.
+    # It is a Many2one field linking to the 'res.users' model, which represents 
+    # the users in the Odoo system.
     # NOTE:
-    # Many2one is used here because different records in the project team member model can link to 
-    # the same user (e.g., a user can be a member of multiple projects), 
+    # Many2one is used here because different records in the project team member 
+    # model can link to the same user (e.g., a user can be a member of multiple projects), 
     # but each team member record can only link to one user.
     user_id = fields.Many2one(
         'res.users',
@@ -68,11 +71,8 @@ class ProjectTeamMember(models.Model):
     #--------------------------------------------------------------
     # milestone_ids is a computed Many2many field that returns all milestones
     # in the project where this user has at least one task assigned.
-    # It has no DB column — values are derived on the fly by querying project.task.
-    # NOTE:
-    # @api.depends('project_id', 'user_id') recomputes the field when the member's
-    # project or user changes. Changes to task assignments are not tracked here
-    # because there is no direct field path from team member to tasks.
+    # It has no DB column — values are derived on the fly by querying project.task
+    # using the method _compute_milestone_ids
     milestone_ids = fields.Many2many(
         'project.milestone',
         compute='_compute_milestone_ids',
