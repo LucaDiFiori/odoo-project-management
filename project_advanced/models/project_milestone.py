@@ -1,4 +1,5 @@
 from odoo import api, fields, models
+from odoo.exceptions import AccessError
 from odoo.addons.project.models.project_task import CLOSED_STATES
 
 # Extends the milestone model to manage state, progress, and synchronization
@@ -109,14 +110,23 @@ class ProjectMilestone(models.Model):
     # - this method uses self to refer to the current model (ProjectMilestone) and ensures that the synchronization logic is applied to each record being created.
     @api.model_create_multi
     def create(self, vals_list):
+        if not self.env.user.has_group('project.group_project_manager'):
+            raise AccessError("Only Project Managers can create milestones.")
         for vals in vals_list:
             self._sync_state_is_reached(vals)
         return super().create(vals_list)
+
+    def unlink(self):
+        if not self.env.user.has_group('project.group_project_manager'):
+            raise AccessError("Only Project Managers can delete milestones.")
+        return super().unlink()
 
     # Keeps state and is_reached synchronized before updating records.
     # Ensures that when either state or is_reached is modified, the other field is
     # updated consistently before the write operation is executed.
     def write(self, vals):
+        if not self.env.user.has_group('project.group_project_manager'):
+            raise AccessError("Only Project Managers can edit milestones.")
         self._sync_state_is_reached(vals)
         return super().write(vals)
 
